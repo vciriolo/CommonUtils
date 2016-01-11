@@ -1,5 +1,5 @@
 #include "ScaleEstimators.h"
-
+#include "TRandom.h"
 
 
 void FindSmallestInterval(double& mean, double& meanErr, double& min, double& max,
@@ -126,7 +126,7 @@ void FindSmallestInterval(double& mean, double& meanErr, double& min, double& ma
 
 void FindRecursiveMean(double& mean, double& meanErr,
                        std::vector<double>& vals, std::vector<double>& weights,
-                       const double& window, const double& tolerance,
+                       const double& window, const double& tolerance, const double& startMean,
                        const bool& verbosity)
 {
   if( verbosity )
@@ -145,7 +145,9 @@ void FindRecursiveMean(double& mean, double& meanErr,
   higEdge += 0.1 * range;
   
   int trial = 0;
-  mean = 1.;
+
+  if(startMean != -1) mean = startMean;
+  else  mean = 1.;
   double oldMean = 1.;
   double delta = 999999;
   
@@ -175,6 +177,7 @@ void FindRecursiveMean(double& mean, double& meanErr,
     }
     else
     {
+      std::cout << " >>> fabs(mean-oldMean) = " << fabs(mean-oldMean) << std::endl;
       return;
     }
   }
@@ -279,6 +282,62 @@ void FindMean(double& mean, double& meanErr,
 
 
 void FindTemplateFit(double& scale, double& scaleErr,
+                     TH1F* h_MC, TH1F* h_DA, TF1** f_template,
+                     const bool& verbosity)
+{
+  if( verbosity )
+    std::cout << ">>>>>> FindTemplateFit" << std::endl;
+  
+  
+  TVirtualFitter::SetDefaultFitter("Fumili2");
+  
+  
+  float xNorm = h_DA->Integral() / h_MC->Integral() * h_DA->GetBinWidth(1) / h_MC->GetBinWidth(1);  
+  h_MC -> Scale(xNorm);
+  
+  
+  histoFunc* templateHistoFunc = new histoFunc(h_MC);
+  char funcName[50];
+  sprintf(funcName,"f_template");
+  
+  //  TF1* f_template = new TF1(funcName,templateHistoFunc,0.9,1.1,3,"histoFunc");
+  (*f_template) = new TF1(funcName,templateHistoFunc,0.7,1.3,3,"histoFunc");
+
+  (*f_template) -> SetParName(0,"Norm"); 
+  (*f_template) -> SetParName(1,"Scale factor"); 
+  (*f_template) -> SetLineWidth(1); 
+  (*f_template) -> SetNpx(10000);
+  (*f_template) -> SetLineColor(kRed+2); 
+  
+  (*f_template)->FixParameter(0,1.);
+  //  (*f_template)->SetParameter(1,0.99);
+  (*f_template)->SetParameter(1,gRandom->Gaus(1.,0.005) );
+  (*f_template)->FixParameter(2,0.);
+  
+  TFitResultPtr rp = h_DA -> Fit(funcName,"QERLS+");
+  int fStatus = rp;
+  int nTrials = 0;
+  while( (fStatus != 0) && (nTrials < 10) )
+  {
+    rp = h_DA -> Fit(funcName,"QNERLS+");
+    fStatus = rp;
+    if( fStatus == 0 ) break;
+    ++nTrials;
+  }
+  
+  double k   = (*f_template)->GetParameter(1);
+  double eee = (*f_template)->GetParError(1); 
+  
+  scale = 1/k;
+  scaleErr = eee/k/k;
+
+  std::cout << " scale = " << scale << "+/-" << scaleErr << std::endl;
+  //  delete f_template;
+}
+
+
+
+void FindTemplateFit(double& scale, double& scaleErr,
                      TH1F* h_MC, TH1F* h_DA,
                      const bool& verbosity)
 {
@@ -298,7 +357,8 @@ void FindTemplateFit(double& scale, double& scaleErr,
   sprintf(funcName,"f_template");
   
   TF1* f_template = new TF1(funcName,templateHistoFunc,0.9,1.1,3,"histoFunc");
-  
+  f_template = new TF1(funcName,templateHistoFunc,0.9,1.1,3,"histoFunc");
+
   f_template -> SetParName(0,"Norm"); 
   f_template -> SetParName(1,"Scale factor"); 
   f_template -> SetLineWidth(1); 
@@ -325,6 +385,5 @@ void FindTemplateFit(double& scale, double& scaleErr,
   
   scale = 1/k;
   scaleErr = eee/k/k;
-  
   delete f_template;
 }

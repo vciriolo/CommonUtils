@@ -9,7 +9,6 @@
 #include "TH2F.h"
 
 
-
 class Smearer
 {
  public:
@@ -18,6 +17,9 @@ class Smearer
   Smearer()
   {
     ShervinExtraSmearingMap = NULL;
+    ShervinExtraSmearingMap_Err = NULL;
+    ShervinEtExtraSmearingMap = NULL;
+    ShervinEtExtraSmearingMap_Err = NULL;
     IJazZExtraSmearingHisto = NULL;
   }
   
@@ -25,25 +27,33 @@ class Smearer
   ~Smearer()
   {
     delete ShervinExtraSmearingMap;
+    delete ShervinExtraSmearingMap_Err;
+    delete ShervinEtExtraSmearingMap;
+    delete ShervinEtExtraSmearingMap_Err;
     delete IJazZExtraSmearingHisto;
   }
   
   //! methods
   void SetShervinExtraSmearingMap(const std::string& fileName);
+  void SetShervinEtExtraSmearingMap(const std::string& fileName);
   void SetIJazZExtraSmearingHisto(const std::string& directory);
   
-  float GetExtraSmearing(const float& scEta, const float& R9, const std::string& label, const std::string& version);
+  float GetExtraSmearing(const float& scEta, const float& R9, const std::string& label, const std::string& version, const float& timesError);
+  float GetEtExtraSmearing(const float& scEta, const float& R9, const std::string& label, const float& Et, const std::string& version, const float& timesError);
 
 
  private:
 
   std::map<std::string,float>* ShervinExtraSmearingMap;
+  std::map<std::string,float>* ShervinExtraSmearingMap_Err;
+  std::map<std::string,std::pair<float,float> >* ShervinEtExtraSmearingMap;
+  std::map<std::string,std::pair<float,float> >* ShervinEtExtraSmearingMap_Err;
   TH2F* IJazZExtraSmearingHisto;
 };
 
 
 
-float Smearer::GetExtraSmearing(const float& scEta, const float& R9, const std::string& label, const std::string& version)
+float Smearer::GetExtraSmearing(const float& scEta, const float& R9, const std::string& label, const std::string& version, const float& timesError)
 { 
   //2011  // from AN2011-426
   if( label == "2011" )
@@ -116,7 +126,11 @@ float Smearer::GetExtraSmearing(const float& scEta, const float& R9, const std::
     if( (fabs(scEta) >= 2.0000) && (fabs(scEta) < 2.5000) && (R9 >= 0.94) ) label = "EEhighEtaGold";
     
     // get value
-    return (*ShervinExtraSmearingMap)[label];
+/*     std::cout << " >>> timesError = " << timesError << std::endl; */
+/*     std::cout << " >>> (*ShervinExtraSmearingMap)[label] = " << (*ShervinExtraSmearingMap)[label] << std::endl; */
+/*     std::cout << " >>> (*ShervinExtraSmearingMap_Err)[label] = " << (*ShervinExtraSmearingMap_Err)[label] << std::endl; */
+
+    return ((*ShervinExtraSmearingMap)[label] + timesError * (*ShervinExtraSmearingMap_Err)[label]);
   }
   
   
@@ -138,15 +152,81 @@ float Smearer::GetExtraSmearing(const float& scEta, const float& R9, const std::
 };
 
 
+float Smearer::GetEtExtraSmearing(const float& scEta, const float& R9, const std::string& label, const float& Et, const std::string& version, const float& timesError)
+{ 
+  if( version == "shervin" && ShervinEtExtraSmearingMap == NULL )
+    std::cout << ">>>>>> Smearer::ERROR: ShervinEtExtraSmearingMap not defined, returning 0. as extra-smearing" << std::endl;
+  if( version == "shervin" && ShervinEtExtraSmearingMap != NULL )
+  {
+    // find eta/R9 bin
+    std::string label = "";
+    float smearValue = 0.;
+    float smearValueErr = 0.;
+
+    if( (fabs(scEta) >= 0.0000) && (fabs(scEta) < 1.0000) && (R9  < 0.94) ) {label = "EBlowEtaBad"; smearValue = 0.0086; smearValueErr = 0.000181;}
+    if( (fabs(scEta) >= 0.0000) && (fabs(scEta) < 1.0000) && (R9 >= 0.94) ) {label = "EBlowEtaGold"; smearValue = 0.0075; smearValueErr = 0.000300;}
+    if( (fabs(scEta) >= 1.0000) && (fabs(scEta) < 1.4442) && (R9  < 0.94) ) {label = "EBhighEtaBad"; smearValue = 0.0188; smearValueErr = 0.000188;}
+    if( (fabs(scEta) >= 1.0000) && (fabs(scEta) < 1.4442) && (R9 >= 0.94) ) {label = "EBhighEtaGold"; smearValue = 0.0122; smearValueErr = 0.000992;}
+
+    if( (fabs(scEta) >= 1.5660) && (fabs(scEta) < 2.0000) && (R9  < 0.94) ) label = "EElowEtaBad";
+    if( (fabs(scEta) >= 1.5660) && (fabs(scEta) < 2.0000) && (R9 >= 0.94) ) label = "EElowEtaGold";
+    if( (fabs(scEta) >= 2.0000) && (fabs(scEta) < 2.5000) && (R9  < 0.94) ) label = "EEhighEtaBad";
+    if( (fabs(scEta) >= 2.0000) && (fabs(scEta) < 2.5000) && (R9 >= 0.94) ) label = "EEhighEtaGold";
+    
+    //    if(fabs(scEta) >= 1.5660) label = "EE";
+    
+    // get value
+    /*     std::cout << " >>> timesError = " << timesError << std::endl; */
+    
+    /*      std::cout << " >>> Et = " << Et << " label = " << label << std::endl;   */
+    /*      std::cout << " >>> smearValue = " << smearValue << std::endl;   */
+    /*      std::cout << " >>> smearValueErr = " << smearValueErr << std::endl;   */
+
+    /*      if(label == "EE"){ */
+    /*        if( (fabs(scEta) >= 1.5660) && (fabs(scEta) < 2.0000) && (R9  < 0.94) ) {smearValue = 0.0086; smearValueErr = 0.000181;} */
+    /*        if( (fabs(scEta) >= 1.5660) && (fabs(scEta) < 2.0000) && (R9 >= 0.94) ) {smearValue = 0.0075; smearValueErr = 0.000300;} */
+    /*        if( (fabs(scEta) >= 2.0000) && (fabs(scEta) < 2.5000) && (R9  < 0.94) ) {smearValue = 0.0188; smearValueErr = 0.000188;} */
+    /*        if( (fabs(scEta) >= 2.0000) && (fabs(scEta) < 2.5000) && (R9 >= 0.94) ) {smearValue = 0.0122; smearValueErr = 0.000992;} */
+    /*      } */
+
+    if(label != "EElowEtaBad" && label != "EElowEtaGold" && label != "EEhighEtaBad" && label != "EEhighEtaGold" && Et >= 100.) 
+      return smearValue + timesError * smearValueErr;
+    //    else if(label == "EE" ) return smearValue + timesError * smearValueErr;
+    else {
+
+      /*
+       float DS = ((*ShervinEtExtraSmearingMap)[label]).first; 
+       float DS_Err = ((*ShervinEtExtraSmearingMap_Err)[label]).first; 
+       float DC = ((*ShervinEtExtraSmearingMap)[label]).second;
+       float DC_Err = ((*ShervinEtExtraSmearingMap_Err)[label]).second; 
+       smearValue = sqrt(pow( DS/sqrt(Et),2.) + pow(DC, 2.)); 
+       smearValueErr = 1./fabs(smearValue) * sqrt(pow( (DS/sqrt(Et)*DS_Err), 2.) + pow( (DC*DC_Err), 2.) ); 
+       return smearValue +timesError * smearValueErr;
+      */
+
+      float DS = ((*ShervinEtExtraSmearingMap)[label]).first; 
+      float DS_Err = ((*ShervinEtExtraSmearingMap_Err)[label]).first; 
+      float DC = ((*ShervinEtExtraSmearingMap)[label]).second; 
+      float DC_Err = ((*ShervinEtExtraSmearingMap_Err)[label]).second; 
+      smearValue = sqrt(pow( ( float(DS + DS_Err * float(timesError))/sqrt(Et)),2.) + pow( float(DC + float(timesError) * DC_Err), 2.) ); 
+      //      smearValueErr = 1./fabs(smearValue) * sqrt(pow( (DS/sqrt(Et)*DS_Err), 2.) + pow( (DC*DC_Err), 2.) );
+      return smearValue;
+
+/*      std::cout << " >>> smearValue = " << smearValue << std::endl;   */
+/*      std::cout << " >>> smearValueErr = " << smearValueErr << std::endl;   */
 
 
-
+    }
+  }
+  return 0.;
+};
 
 void Smearer::SetShervinExtraSmearingMap(const std::string& fileName)
 {
   std::cout << ">>>>>> Smearer::SetShervinExtraSmearingMap begin" << std::endl;
   
   std::map<std::string,float>* MapOfSmearings = new std::map<std::string,float>;
+  std::map<std::string,float>* MapOfSmearings_Err = new std::map<std::string,float>;
 
   //fill the map with file data
   std::string evtType;
@@ -160,12 +240,48 @@ void Smearer::SetShervinExtraSmearingMap(const std::string& fileName)
     if( !inFile.good() ) break;
     
     (*MapOfSmearings)[evtType] = smear;
+    (*MapOfSmearings_Err)[evtType] = errSmear;
   }
   inFile.close();
   
   ShervinExtraSmearingMap = MapOfSmearings;
+  ShervinExtraSmearingMap_Err = MapOfSmearings_Err;
   
   std::cout << ">>>>>> Smearer::SetShervinExtraSmearingMap end" << std::endl;
+}
+
+
+void Smearer::SetShervinEtExtraSmearingMap(const std::string& fileName)
+{
+  std::cout << ">>>>>> Smearer::SetShervinEtExtraSmearingMap begin" << std::endl;
+  
+  std::map<std::string,std::pair<float,float> >* MapOfSmearings = new std::map<std::string,std::pair<float,float> >;
+  std::map<std::string,std::pair<float,float> >* MapOfSmearings_Err = new std::map<std::string,std::pair<float,float> >;
+
+  //fill the map with file data
+  std::string evtType;
+  float stocatic;
+  float stocasticErr;
+  float constant;
+  float constantErr;
+
+  std::ifstream inFile(fileName.c_str(),std::ios::in);
+  while(1)
+  {
+    inFile >> evtType >> stocatic >> stocasticErr >> constant >> constantErr;
+    if( !inFile.good() ) break;
+    
+    std::pair<float,float> dummy(stocatic,constant);
+    std::pair<float,float> dummyErr(stocasticErr,constantErr);
+    (*MapOfSmearings)[evtType] = dummy;
+    (*MapOfSmearings_Err)[evtType] = dummyErr;
+  }
+  inFile.close();
+  
+  ShervinEtExtraSmearingMap = MapOfSmearings;
+  ShervinEtExtraSmearingMap_Err = MapOfSmearings_Err;
+  
+  std::cout << ">>>>>> Smearer::SetShervinEtExtraSmearingMap end" << std::endl;
 }
 
 
