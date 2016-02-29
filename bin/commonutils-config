@@ -3,7 +3,7 @@ case $1 in
 echo "-I$COMMONUTILSINCLUDE"
 ;;
 --libs)
-echo "-L$COMMONUTILSLIB -lEvent"
+echo "-L$COMMONUTILSLIB"
 ;;
 *)
 ### Give an error
