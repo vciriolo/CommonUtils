@@ -300,6 +300,16 @@ void FindTemplateFit(double& scale, double& scaleErr,
   char funcName[50];
   sprintf(funcName,"f_template");
   
+  f_template =  TF1(funcName,templateHistoFunc,0.9,1.1,3,"histoFunc");
+
+std::cout<<"check1"<<std::endl;
+  f_template.SetParName(0,"Norm"); 
+    std::cout<<"check2"<<std::endl;
+  f_template.SetParName(1,"Scale factor"); 
+  f_template.SetLineWidth(1); 
+  f_template.SetNpx(10000);
+  f_template.SetLineColor(kRed+2); 
+  
   //  TF1* f_template = new TF1(funcName,templateHistoFunc,0.9,1.1,3,"histoFunc");
   (*f_template) = new TF1(funcName,templateHistoFunc,0.7,1.3,3,"histoFunc");
 
@@ -313,8 +323,17 @@ void FindTemplateFit(double& scale, double& scaleErr,
   //  (*f_template)->SetParameter(1,0.99);
   (*f_template)->SetParameter(1,gRandom->Gaus(1.,0.005) );
   (*f_template)->FixParameter(2,0.);
+
+f_template.FixParameter(0,1.);
+  //  (*f_template)->SetParameter(1,0.99);
+  f_template.SetParameter(1,gRandom->Gaus(1.,0.005) );
+  f_template.FixParameter(2,0.);
+  std::cout<<"---- "<<f_template.GetParameter(1)<<std::endl;
+  //TFitResultPtr rp = h_DA -> Fit(funcName,"QERLS+");
+  TF1* pointer = &f_template;
+  TFitResultPtr rp = h_DA -> Fit(pointer,"QERLS+");
   
-  TFitResultPtr rp = h_DA -> Fit(funcName,"QERLS+");
+  //TFitResultPtr rp = h_DA -> Fit(funcName,"QERLS+");
   int fStatus = rp;
   int nTrials = 0;
   while( (fStatus != 0) && (nTrials < 10) )
